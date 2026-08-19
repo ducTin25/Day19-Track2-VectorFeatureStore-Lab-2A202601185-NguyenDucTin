@@ -52,6 +52,11 @@ class Searcher:
         self.bm25: BM25Okapi | None = None
         self.client: QdrantClient | None = None
         self.embedder: Embedder | None = None
+        # Query vectors are immutable for a given model and are often reused
+        # by repeated API calls (benchmarking, retries, pagination). Keep a
+        # small per-searcher cache so tail latency is spent on retrieval, not
+        # recomputing the same embedding.
+        self._query_vectors: dict[str, list[float]] = {}
 
     @property
     def size(self) -> int:
@@ -162,7 +167,10 @@ class Searcher:
 
     def _search_semantic(self, query: str, top_k: int) -> list[SearchHit]:
         assert self.client is not None and self.embedder is not None
-        q_vec = next(self.embedder.embed([query])).tolist()
+        q_vec = self._query_vectors.get(query)
+        if q_vec is None:
+            q_vec = next(self.embedder.embed([query])).tolist()
+            self._query_vectors[query] = q_vec
         result = self.client.query_points(
             collection_name=COLLECTION,
             query=q_vec,

@@ -8,6 +8,7 @@ JUPYTER  := $(VENV)/bin/jupyter
 JUPYTEXT := $(VENV)/bin/jupytext
 UVICORN  := $(VENV)/bin/uvicorn
 PYTEST   := $(VENV)/bin/pytest
+PORT     ?= 8000
 
 .DEFAULT_GOAL := help
 
@@ -29,7 +30,7 @@ seed: ## [both] (Re)generate data/corpus_vn.jsonl + data/golden_set.jsonl
 	@$(PY) scripts/seed_corpus.py
 
 api: ## [lite] Start FastAPI /search on http://localhost:8000
-	@$(UVICORN) app.main:app --reload --port 8000
+	@$(UVICORN) app.main:app --reload --port $(PORT)
 
 lab: ## [lite] Open Jupyter Lab on http://localhost:8888
 	@$(JUPYTEXT) --to notebook --update notebooks/[0-9]*.py 2>/dev/null || true
@@ -39,7 +40,7 @@ benchmark: ## [both] Precision@10 (keyword/semantic/hybrid) + P99 latency table
 	@$(PY) scripts/benchmark.py
 
 test: ## [both] Run pytest (app + scripts)
-	@$(PYTEST) -q
+	@$(PYTEST) -q tests
 
 gen-advanced: ## [both] Generate data for the advanced missions (NB6 + NB8)
 	@$(PY) scripts/gen_agent_queries.py
